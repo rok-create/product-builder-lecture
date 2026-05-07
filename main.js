@@ -234,7 +234,7 @@ function renderChart(historyData) {
     currentChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['1일 전', '2일 전', '3일 전', '4일 전', '5일 전', '6일 전', '오늘'],
+            labels: ['6일 전', '5일 전', '4일 전', '3일 전', '2일 전', '1일 전', '오늘'],
             datasets: [{
                 label: '주가',
                 data: historyData,
