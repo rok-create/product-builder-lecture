@@ -221,6 +221,41 @@ body {
     font-weight: 700;
 }
 
+.news-summary-container {
+    grid-column: span 2;
+    margin-top: 12px;
+}
+
+.news-item {
+    padding: 12px;
+    border-left: 4px solid var(--accent-color);
+    background-color: rgba(56, 189, 248, 0.05);
+    margin-bottom: 12px;
+}
+
+.news-item h4 {
+    margin-bottom: 8px;
+    color: var(--accent-color);
+}
+
+.news-item ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.news-item li {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.news-item li::before {
+    content: "•";
+    margin-right: 8px;
+    color: var(--accent-color);
+}
+
 /* Utility Classes */
 .up { color: var(--up-color); }
 .down { color: var(--down-color); }

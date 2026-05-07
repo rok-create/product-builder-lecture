@@ -16,7 +16,15 @@ const stockData = [
         eps: "21,720원",
         dividend: "1.2%",
         roe: "22.5%",
-        history: [245000, 252000, 260000, 266000, 268000, 260000, 271500]
+        history: [245000, 252000, 260000, 266000, 268000, 260000, 271500],
+        news: {
+            title: "삼성전자, HBM4 양산 계획 발표 및 글로벌 공급 확대",
+            summary: [
+                "2026년 하반기 HBM4 본격 양산 계획을 발표하며 AI 반도체 시장 주도권 강화",
+                "엔비디아 외 추가 글로벌 빅테크 기업들과의 대규모 공급 계약 체결 소식",
+                "분기 영업이익 20조 원 돌파 가능성에 따른 외국인 투자자 집중 매수"
+            ]
+        }
     },
     {
         name: "SK하이닉스",
@@ -30,7 +38,15 @@ const stockData = [
         eps: "156,150원",
         dividend: "0.5%",
         roe: "34.2%",
-        history: [1450000, 1500000, 1550000, 1520000, 1580000, 1600000, 1624000]
+        history: [1450000, 1500000, 1550000, 1520000, 1580000, 1600000, 1624000],
+        news: {
+            title: "SK하이닉스, 1b 나노 공정 수율 90% 달성.. 업계 최고 수준",
+            summary: [
+                "차세대 메모리 공정 수율을 조기에 확보하며 경쟁사 대비 압도적인 수익성 증명",
+                "데이터센터용 초고성능 SSD 수요 폭증으로 인해 연간 수주 물량 이미 완판",
+                "시가총액 1,200조 원 육박하며 글로벌 반도체 기업 5위권 진입 시도"
+            ]
+        }
     },
     {
         name: "LG에너지솔루션",
@@ -44,7 +60,15 @@ const stockData = [
         eps: "18,600원",
         dividend: "0.1%",
         roe: "12.8%",
-        history: [880000, 870000, 865000, 868000, 862000, 857000, 845000]
+        history: [880000, 870000, 865000, 868000, 862000, 857000, 845000],
+        news: {
+            title: "전고체 배터리 상용화 앞당긴다.. LG엔솔 연구 성과 발표",
+            summary: [
+                "꿈의 배터리로 불리는 전고체 배터리의 핵심 전해질 안정성 테스트 성공",
+                "유럽 내 주요 완성차 업체와의 합작 공장(JV) 가동률 100% 근접",
+                "단기적으로 원자재 가격 변동에 따른 수익성 소폭 하락 가능성 제기"
+            ]
+        }
     },
     {
         name: "현대차",
@@ -58,7 +82,15 @@ const stockData = [
         eps: "93,800원",
         dividend: "3.5%",
         roe: "18.1%",
-        history: [540000, 552000, 565000, 568000, 575000, 570000, 582000]
+        history: [540000, 552000, 565000, 568000, 575000, 570000, 582000],
+        news: {
+            title: "현대차, 자율주행 레벨 4 양산차 공개.. 모빌리티 시장 선점",
+            summary: [
+                "운전자의 개입이 거의 없는 자율주행 레벨 4 차량의 양산 준비 완료 및 공개",
+                "미국 및 인도 시장에서의 점유율 확대가 지속되며 연간 순이익 최고치 경신",
+                "배당 확대 및 자사주 소각 등 강력한 주주 환원 정책 지속 발표"
+            ]
+        }
     },
     {
         name: "NAVER",
@@ -72,7 +104,15 @@ const stockData = [
         eps: "16,610원",
         dividend: "0.5%",
         roe: "14.1%",
-        history: [388000, 396000, 399000, 402000, 410000, 405000, 412000]
+        history: [388000, 396000, 399000, 402000, 410000, 405000, 412000],
+        news: {
+            title: "네이버, 생성형 AI 하이퍼클로바X B2B 매출 본격화",
+            summary: [
+                "국내 주요 공공기관 및 대기업 대상 AI 솔루션 공급 계약이 실적으로 가시화",
+                "광고 매출의 안정적 성장과 커머스 부문의 수익성 개선이 동반 진행 중",
+                "글로벌 웹툰 사업의 미국 증시 상장 기대감에 따른 기업 가치 재평가"
+            ]
+        }
     }
 ];
 
@@ -162,7 +202,22 @@ function updateDashboard(stock) {
     document.getElementById('metric-dividend').innerText = stock.dividend;
     document.getElementById('metric-roe').innerText = stock.roe;
 
+    // Update News
+    updateNews(stock.news);
+
     renderChart(stock.history);
+}
+
+function updateNews(news) {
+    const newsContent = document.getElementById('news-content');
+    newsContent.innerHTML = `
+        <div class="news-item">
+            <h4>${news.title}</h4>
+            <ul>
+                ${news.summary.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+        </div>
+    `;
 }
 
 // Render Price Chart using Chart.js
