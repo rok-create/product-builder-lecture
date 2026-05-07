@@ -139,6 +139,8 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .stock-summary-card {
@@ -176,8 +178,19 @@ body {
 .card {
     background-color: var(--card-bg);
     border-radius: 12px;
-    padding: 24px;
+    padding: 20px;
     border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-container {
+    height: 400px; /* Fixed height to prevent scrolling bug */
+}
+
+.chart-container canvas {
+    flex-grow: 1;
+    max-height: 320px;
 }
 
 .chart-container h3, .fundamentals-container h3 {
