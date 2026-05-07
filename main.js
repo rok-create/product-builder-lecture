@@ -2,91 +2,77 @@
 let currentChart = null;
 let lastUpdateTime = new Date();
 
-// Mock Data for Korean Stocks (Updated for May 2024 Context)
+// Mock Data for Korean Stocks (Context: May 7, 2026 - AI & Memory Boom)
 const stockData = [
     {
         name: "삼성전자",
         code: "005930",
-        price: 79200,
-        change: 1400,
-        percent: 1.80,
-        per: 36.5,
-        pbr: 1.5,
-        marketCap: "472.8조",
-        eps: "2,230원",
-        dividend: "2.1%",
-        roe: "12.5%",
-        history: [75000, 76200, 74800, 77000, 78500, 77800, 79200]
+        price: 271500,
+        change: 5500,
+        percent: 2.07,
+        per: 12.5,
+        pbr: 2.8,
+        marketCap: "1,620.5조",
+        eps: "21,720원",
+        dividend: "1.2%",
+        roe: "22.5%",
+        history: [245000, 252000, 260000, 266000, 268000, 260000, 271500]
     },
     {
         name: "SK하이닉스",
         code: "000660",
-        price: 192300,
-        change: 6900,
-        percent: 3.72,
-        per: 16.2,
-        pbr: 2.1,
-        marketCap: "140.0조",
-        eps: "12,040원",
-        dividend: "0.8%",
-        roe: "18.2%",
-        history: [172000, 178000, 185000, 182000, 190000, 188000, 192300]
+        price: 1624000,
+        change: 42000,
+        percent: 2.65,
+        per: 10.4,
+        pbr: 3.5,
+        marketCap: "1,180.2조",
+        eps: "156,150원",
+        dividend: "0.5%",
+        roe: "34.2%",
+        history: [1450000, 1500000, 1550000, 1520000, 1580000, 1600000, 1624000]
     },
     {
         name: "LG에너지솔루션",
         code: "373220",
-        price: 388500,
-        change: -4500,
-        percent: -1.15,
-        per: 65.4,
-        pbr: 4.2,
-        marketCap: "90.9조",
-        eps: "5,940원",
-        dividend: "0.0%",
-        roe: "6.8%",
-        history: [405000, 400000, 395000, 398000, 392000, 390000, 388500]
+        price: 845000,
+        change: -12000,
+        percent: -1.40,
+        per: 45.4,
+        pbr: 5.2,
+        marketCap: "197.9조",
+        eps: "18,600원",
+        dividend: "0.1%",
+        roe: "12.8%",
+        history: [880000, 870000, 865000, 868000, 862000, 857000, 845000]
     },
     {
         name: "현대차",
         code: "005380",
-        price: 251500,
-        change: 3500,
-        percent: 1.41,
-        per: 5.2,
-        pbr: 0.7,
-        marketCap: "53.2조",
-        eps: "48,200원",
-        dividend: "4.8%",
-        roe: "15.1%",
-        history: [240000, 242000, 245000, 248000, 250000, 248000, 251500]
+        price: 582000,
+        change: 15000,
+        percent: 2.64,
+        per: 6.2,
+        pbr: 1.1,
+        marketCap: "124.2조",
+        eps: "93,800원",
+        dividend: "3.5%",
+        roe: "18.1%",
+        history: [540000, 552000, 565000, 568000, 575000, 570000, 582000]
     },
     {
         name: "NAVER",
         code: "035420",
-        price: 191200,
-        change: 1200,
-        percent: 0.63,
-        per: 29.8,
-        pbr: 1.3,
-        marketCap: "31.2조",
-        eps: "6,610원",
+        price: 412000,
+        change: 8500,
+        percent: 2.11,
+        per: 24.8,
+        pbr: 2.3,
+        marketCap: "67.2조",
+        eps: "16,610원",
         dividend: "0.5%",
-        roe: "10.1%",
-        history: [188000, 186000, 189000, 192000, 190000, 189000, 191200]
-    },
-    {
-        name: "기아",
-        code: "000270",
-        price: 118400,
-        change: 2100,
-        percent: 1.81,
-        per: 4.8,
-        pbr: 1.1,
-        marketCap: "47.8조",
-        eps: "24,500원",
-        dividend: "5.1%",
-        roe: "23.4%",
-        history: [110000, 112000, 115000, 114000, 116000, 117000, 118400]
+        roe: "14.1%",
+        history: [388000, 396000, 399000, 402000, 410000, 405000, 412000]
     }
 ];
 
@@ -102,19 +88,18 @@ function init() {
         console.log("자동 1시간 업데이트 실행 중...");
         lastUpdateTime = new Date();
         updateMarketStatus();
-        // 실제 운영 시 이곳에서 API를 호출하여 stockData를 갱신합니다.
     }, 3600000);
 }
 
-// Update KOSPI status (2750+ as requested)
+// Update KOSPI status (2026 Reality: 7,000+)
 function updateMarketStatus() {
     const marketStatusEl = document.querySelector('.market-status');
     const timeStr = lastUpdateTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     marketStatusEl.innerHTML = `
         <span class="status-indicator live"></span> 
-        KOSPI <span class="value" style="color: var(--up-color); font-weight: bold;">2,752.14</span> 
-        <span class="up">▲ 24.32 (0.89%)</span>
-        <span style="margin-left: 10px; font-size: 0.75rem; color: var(--text-secondary);">최종 업데이트: ${timeStr}</span>
+        KOSPI <span class="value" style="color: var(--up-color); font-weight: bold;">7,252.14</span> 
+        <span class="up">▲ 124.32 (1.74%)</span>
+        <span style="margin-left: 10px; font-size: 0.75rem; color: var(--text-secondary);">최종 업데이트: 2026.05.07 ${timeStr}</span>
     `;
 }
 
