@@ -1,19 +1,15 @@
 let currentChart = null;
-let lastUpdateTime = new Date("2026-05-08T09:00:00");
+let selectedStock = null;
+
+const FINNHUB_API = 'https://finnhub.io/api/v1/quote';
+const FINNHUB_KEY_STORAGE = 'stockdash_finnhub_api_key';
 
 const stockData = [
     {
-        name: "삼성전자",
-        code: "005930",
-        price: 275500,
-        change: 4000,
-        percent: 1.47,
-        per: 12.8,
-        pbr: 2.9,
-        marketCap: "1,644.5조",
-        eps: "21,720원",
-        dividend: "1.2%",
-        roe: "22.5%",
+        name: "삼성전자", code: "005930", finnhub: "005930.KS",
+        price: 275500, change: 4000, percent: 1.47,
+        per: 12.8, pbr: 2.9, marketCap: "1,644.5조",
+        eps: "21,720원", dividend: "1.2%", roe: "22.5%",
         history: [252000, 260000, 266000, 268000, 260000, 271500, 275500],
         news: {
             title: "삼성전자, 5월 8일 '어버이날' 맞아 임직원 가족 초청 행사 및 반도체 비전 공유",
@@ -25,17 +21,10 @@ const stockData = [
         }
     },
     {
-        name: "SK하이닉스",
-        code: "000660",
-        price: 1642000,
-        change: 18000,
-        percent: 1.11,
-        per: 10.6,
-        pbr: 3.6,
-        marketCap: "1,195.2조",
-        eps: "156,150원",
-        dividend: "0.5%",
-        roe: "34.2%",
+        name: "SK하이닉스", code: "000660", finnhub: "000660.KS",
+        price: 1642000, change: 18000, percent: 1.11,
+        per: 10.6, pbr: 3.6, marketCap: "1,195.2조",
+        eps: "156,150원", dividend: "0.5%", roe: "34.2%",
         history: [1500000, 1550000, 1520000, 1580000, 1600000, 1624000, 1642000],
         news: {
             title: "SK하이닉스, 차세대 CXL 메모리 솔루션 고객사 인증 완료",
@@ -47,17 +36,10 @@ const stockData = [
         }
     },
     {
-        name: "LG에너지솔루션",
-        code: "373220",
-        price: 852000,
-        change: 7000,
-        percent: 0.83,
-        per: 45.8,
-        pbr: 5.3,
-        marketCap: "199.3조",
-        eps: "18,600원",
-        dividend: "0.1%",
-        roe: "12.8%",
+        name: "LG에너지솔루션", code: "373220", finnhub: "373220.KS",
+        price: 852000, change: 7000, percent: 0.83,
+        per: 45.8, pbr: 5.3, marketCap: "199.3조",
+        eps: "18,600원", dividend: "0.1%", roe: "12.8%",
         history: [870000, 865000, 868000, 862000, 857000, 845000, 852000],
         news: {
             title: "LG엔솔, 북미 LFP 배터리 전용 라인 가동.. 시장 다변화 성공",
@@ -69,17 +51,10 @@ const stockData = [
         }
     },
     {
-        name: "현대차",
-        code: "005380",
-        price: 588000,
-        change: 6000,
-        percent: 1.03,
-        per: 6.3,
-        pbr: 1.2,
-        marketCap: "125.8조",
-        eps: "93,800원",
-        dividend: "3.5%",
-        roe: "18.1%",
+        name: "현대차", code: "005380", finnhub: "005380.KS",
+        price: 588000, change: 6000, percent: 1.03,
+        per: 6.3, pbr: 1.2, marketCap: "125.8조",
+        eps: "93,800원", dividend: "3.5%", roe: "18.1%",
         history: [552000, 565000, 568000, 575000, 570000, 582000, 588000],
         news: {
             title: "현대차, 인도 현지 공장 생산 능력 100만 대 돌파 가시화",
@@ -91,17 +66,10 @@ const stockData = [
         }
     },
     {
-        name: "NAVER",
-        code: "035420",
-        price: 415000,
-        change: 3000,
-        percent: 0.73,
-        per: 25.1,
-        pbr: 2.4,
-        marketCap: "67.8조",
-        eps: "16,610원",
-        dividend: "0.5%",
-        roe: "14.1%",
+        name: "NAVER", code: "035420", finnhub: "035420.KS",
+        price: 415000, change: 3000, percent: 0.73,
+        per: 25.1, pbr: 2.4, marketCap: "67.8조",
+        eps: "16,610원", dividend: "0.5%", roe: "14.1%",
         history: [396000, 399000, 402000, 410000, 405000, 412000, 415000],
         news: {
             title: "네이버 뉴스, AI 요약 서비스 이용자 만족도 90% 상회",
@@ -114,24 +82,92 @@ const stockData = [
     }
 ];
 
-function init() {
-    updateMarketStatus();
-    renderTrendingList();
-    updateDashboard(stockData[0]);
-    setupSearch();
+// ── API ──────────────────────────────────────────────────────────────
 
-    setInterval(() => {
-        lastUpdateTime = new Date(lastUpdateTime.getTime() + 3600000);
-        updateMarketStatus();
-    }, 3600000);
+function getApiKey() {
+    return localStorage.getItem(FINNHUB_KEY_STORAGE)?.trim() || '';
 }
 
-function updateMarketStatus() {
-    const timeStr = lastUpdateTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('kospi-value').textContent = '7,285.42';
-    document.getElementById('kospi-change').textContent = '▲ 33.28 (0.46%)';
-    document.getElementById('update-time').textContent = `2026.05.08  ${timeStr} 기준`;
+async function fetchFinnhubQuote(symbol) {
+    const token = getApiKey();
+    if (!token) return null;
+
+    const url = `${FINNHUB_API}?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(token)}`;
+    try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) return null;
+        const quote = await r.json();
+        if (typeof quote.c !== 'number' || quote.c <= 0) return null;
+        return { symbol, ...quote };
+    } catch {
+        return null;
+    }
 }
+
+async function fetchQuotes(symbols) {
+    const quotes = await Promise.all(symbols.map(fetchFinnhubQuote));
+    const validQuotes = quotes.filter(Boolean);
+    return validQuotes.length ? validQuotes : null;
+}
+
+async function refreshAll() {
+    const quotes = await fetchQuotes(stockData.map(s => s.finnhub));
+    let isLive = false;
+
+    if (quotes) {
+        isLive = true;
+        quotes.forEach(q => {
+            const s = stockData.find(s => s.finnhub === q.symbol);
+            if (!s) return;
+            const newPrice = Math.round(q.c);
+            s.price = newPrice;
+            s.change = Math.round(q.d ?? newPrice - (q.pc || newPrice));
+            s.percent = +(q.dp ?? ((s.change / (q.pc || newPrice)) * 100)).toFixed(2);
+            s.history = [...s.history.slice(1), newPrice];
+        });
+    } else {
+        // Simulate minor fluctuations when API is unreachable
+        stockData.forEach(s => {
+            const delta = Math.round(s.price * (Math.random() - 0.5) * 0.002);
+            s.price = Math.max(1, s.price + delta);
+            s.change += delta;
+            s.percent = +((s.change / (s.price - s.change || 1)) * 100).toFixed(2);
+            s.history = [...s.history.slice(1), s.price];
+        });
+    }
+
+    // Finnhub Korean index coverage can vary by plan. Keep demo value if unavailable.
+    const kospi = await fetchQuotes(['KS11.KS']);
+    if (kospi?.[0]) {
+        const k = kospi[0];
+        document.getElementById('kospi-value').textContent =
+            k.c.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const up = (k.d ?? 0) >= 0;
+        const el = document.getElementById('kospi-change');
+        el.textContent = `${up ? '▲' : '▼'} ${Math.abs(k.dp ?? 0).toFixed(2)}%`;
+        el.className = `market-change ${up ? 'up' : 'down'}`;
+    }
+
+    setStatus(isLive);
+    updateSidebarPrices();
+
+    if (selectedStock) {
+        const updated = stockData.find(s => s.code === selectedStock.code);
+        if (updated) refreshCurrentStock(updated);
+    }
+}
+
+// ── Status indicator ──────────────────────────────────────────────────
+
+function setStatus(isLive) {
+    const t = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const hasKey = Boolean(getApiKey());
+    document.getElementById('update-time').innerHTML = isLive
+        ? `<span style="color:#00c896">● FINNHUB</span>&ensp;${t}`
+        : `<span style="color:#3a5470">● ${hasKey ? '대기' : '키 필요'}</span>&ensp;${t}`;
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────
 
 function renderTrendingList() {
     const list = document.getElementById('trending-list');
@@ -140,11 +176,9 @@ function renderTrendingList() {
     stockData.forEach((stock, i) => {
         const li = document.createElement('li');
         li.className = 'stock-item';
+        li.dataset.code = stock.code;
 
         const isUp = stock.change >= 0;
-        const colorClass = isUp ? 'up' : 'down';
-        const sign = isUp ? '▲' : '▼';
-
         li.innerHTML = `
             <span class="item-rank">${i + 1}</span>
             <div class="item-info">
@@ -152,8 +186,8 @@ function renderTrendingList() {
                 <div class="item-code">${stock.code}</div>
             </div>
             <div class="item-price">
-                <div class="item-price-val ${colorClass}">${stock.price.toLocaleString()}</div>
-                <div class="item-price-pct ${colorClass}">${sign} ${Math.abs(stock.percent)}%</div>
+                <div class="item-price-val ${isUp ? 'up' : 'down'}">${stock.price.toLocaleString()}</div>
+                <div class="item-price-pct ${isUp ? 'up' : 'down'}">${isUp ? '▲' : '▼'} ${Math.abs(stock.percent)}%</div>
             </div>
         `;
 
@@ -166,29 +200,49 @@ function renderTrendingList() {
         list.appendChild(li);
     });
 
-    list.firstChild && list.firstChild.classList.add('active');
+    list.firstChild?.classList.add('active');
 }
 
+function updateSidebarPrices() {
+    stockData.forEach(stock => {
+        const item = document.querySelector(`[data-code="${stock.code}"]`);
+        if (!item) return;
+        const isUp = stock.change >= 0;
+        const colorClass = isUp ? 'up' : 'down';
+        const sign = isUp ? '▲' : '▼';
+
+        const valEl = item.querySelector('.item-price-val');
+        valEl.className = `item-price-val ${colorClass}`;
+        valEl.textContent = stock.price.toLocaleString();
+
+        const pctEl = item.querySelector('.item-price-pct');
+        pctEl.className = `item-price-pct ${colorClass}`;
+        pctEl.textContent = `${sign} ${Math.abs(stock.percent)}%`;
+    });
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+
 function updateDashboard(stock) {
+    selectedStock = stock;
     document.getElementById('selected-stock-name').textContent = stock.name;
     document.getElementById('selected-stock-code').textContent = stock.code;
-
-    document.getElementById('current-price').textContent = `${stock.price.toLocaleString()}원`;
-
-    const changeEl = document.getElementById('price-change');
-    const isUp = stock.change >= 0;
-    changeEl.className = `price-delta ${isUp ? 'up' : 'down'}`;
-    const sign = isUp ? '▲' : '▼';
-    changeEl.textContent = `${sign} ${Math.abs(stock.change).toLocaleString()} (${stock.percent}%)`;
-
     document.getElementById('metric-per').textContent = stock.per;
     document.getElementById('metric-pbr').textContent = stock.pbr;
     document.getElementById('metric-marketcap').textContent = stock.marketCap;
     document.getElementById('metric-eps').textContent = stock.eps;
     document.getElementById('metric-dividend').textContent = stock.dividend;
     document.getElementById('metric-roe').textContent = stock.roe;
-
     updateNews(stock.news);
+    refreshCurrentStock(stock);
+}
+
+function refreshCurrentStock(stock) {
+    document.getElementById('current-price').textContent = `${stock.price.toLocaleString()}원`;
+    const isUp = stock.change >= 0;
+    const changeEl = document.getElementById('price-change');
+    changeEl.className = `price-delta ${isUp ? 'up' : 'down'}`;
+    changeEl.textContent = `${isUp ? '▲' : '▼'} ${Math.abs(stock.change).toLocaleString()} (${stock.percent}%)`;
     renderChart(stock.history);
 }
 
@@ -206,7 +260,6 @@ function updateNews(news) {
 
 function renderChart(historyData) {
     const ctx = document.getElementById('stockChart').getContext('2d');
-
     if (currentChart) currentChart.destroy();
 
     const isUp = historyData[historyData.length - 1] >= historyData[0];
@@ -220,10 +273,10 @@ function renderChart(historyData) {
                 data: historyData,
                 borderColor: color,
                 backgroundColor: (ctx) => {
-                    const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
-                    gradient.addColorStop(0, color + '30');
-                    gradient.addColorStop(1, color + '00');
-                    return gradient;
+                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+                    g.addColorStop(0, color + '30');
+                    g.addColorStop(1, color + '00');
+                    return g;
                 },
                 fill: true,
                 tension: 0.35,
@@ -247,29 +300,58 @@ function renderChart(historyData) {
                     ticks: { color: '#3a5470', font: { size: 10 } }
                 },
                 y: {
-                    grid: { color: '#101f33', drawBorder: false },
+                    grid: { color: '#101f33' },
                     border: { display: false },
-                    ticks: {
-                        color: '#3a5470',
-                        font: { size: 10 },
-                        callback: v => v.toLocaleString()
-                    }
+                    ticks: { color: '#3a5470', font: { size: 10 }, callback: v => v.toLocaleString() }
                 }
             }
         }
     });
 }
 
+// ── Search ────────────────────────────────────────────────────────────
+
 function setupSearch() {
     document.getElementById('stock-search').addEventListener('input', e => {
         const term = e.target.value.toLowerCase();
         document.querySelectorAll('.stock-item').forEach((item, i) => {
-            const stock = stockData[i];
+            const s = stockData[i];
             item.style.display =
-                stock.name.toLowerCase().includes(term) || stock.code.includes(term)
-                    ? 'flex' : 'none';
+                s.name.toLowerCase().includes(term) || s.code.includes(term) ? 'flex' : 'none';
         });
     });
+}
+
+function setupApiKey() {
+    const input = document.getElementById('api-key');
+    const button = document.getElementById('save-api-key');
+    const savedKey = getApiKey();
+
+    if (savedKey) input.value = savedKey;
+
+    button.addEventListener('click', async () => {
+        const key = input.value.trim();
+        if (key) {
+            localStorage.setItem(FINNHUB_KEY_STORAGE, key);
+        } else {
+            localStorage.removeItem(FINNHUB_KEY_STORAGE);
+        }
+        button.textContent = '저장됨';
+        await refreshAll();
+        setTimeout(() => { button.textContent = '저장'; }, 1200);
+    });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+
+async function init() {
+    renderTrendingList();
+    updateDashboard(stockData[0]);
+    setupSearch();
+    setupApiKey();
+
+    await refreshAll();           // 즉시 첫 fetch
+    setInterval(refreshAll, 60000); // 이후 1분마다
 }
 
 window.onload = init;
