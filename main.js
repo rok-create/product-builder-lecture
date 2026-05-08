@@ -1,8 +1,6 @@
-// Global State
 let currentChart = null;
-let lastUpdateTime = new Date("2026-05-08T09:00:00"); // Set to May 8, 2026
+let lastUpdateTime = new Date("2026-05-08T09:00:00");
 
-// Mock Data for Korean Stocks (Context: May 8, 2026 - AI & Memory Boom)
 const stockData = [
     {
         name: "삼성전자",
@@ -116,58 +114,46 @@ const stockData = [
     }
 ];
 
-// Initialize the app
 function init() {
-    renderTrendingList();
-    updateDashboard(stockData[0]); // Default to Samsung
-    setupSearch();
     updateMarketStatus();
-    
-    // Set up auto-refresh every hour (3600000 ms)
+    renderTrendingList();
+    updateDashboard(stockData[0]);
+    setupSearch();
+
     setInterval(() => {
-        console.log("자동 1시간 업데이트 실행 중...");
-        // 1시간마다 현재 시간(5월 8일 기준)을 유지하며 업데이트
         lastUpdateTime = new Date(lastUpdateTime.getTime() + 3600000);
         updateMarketStatus();
     }, 3600000);
 }
 
-// Update KOSPI status (2026 Reality: 7,000+)
 function updateMarketStatus() {
-    const marketStatusEl = document.querySelector('.market-status');
     const timeStr = lastUpdateTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    marketStatusEl.innerHTML = `
-        <span class="status-indicator live"></span> 
-        KOSPI <span class="value" style="color: var(--up-color); font-weight: bold;">7,285.42</span> 
-        <span class="up">▲ 33.28 (0.46%)</span>
-        <span style="margin-left: 10px; font-size: 0.75rem; color: var(--text-secondary);">최종 업데이트: 2026.05.08 ${timeStr}</span>
-    `;
+    document.getElementById('kospi-value').textContent = '7,285.42';
+    document.getElementById('kospi-change').textContent = '▲ 33.28 (0.46%)';
+    document.getElementById('update-time').textContent = `2026.05.08  ${timeStr} 기준`;
 }
 
-// Render the sidebar trending list
 function renderTrendingList() {
-    const listElement = document.getElementById('trending-list');
-    listElement.innerHTML = '';
+    const list = document.getElementById('trending-list');
+    list.innerHTML = '';
 
-    stockData.forEach(stock => {
+    stockData.forEach((stock, i) => {
         const li = document.createElement('li');
         li.className = 'stock-item';
-        if (stock.name === document.getElementById('selected-stock-name').innerText) {
-            li.classList.add('active');
-        }
 
         const isUp = stock.change >= 0;
         const colorClass = isUp ? 'up' : 'down';
         const sign = isUp ? '▲' : '▼';
 
         li.innerHTML = `
-            <div>
-                <span class="name">${stock.name}</span>
-                <span class="code">${stock.code}</span>
+            <span class="item-rank">${i + 1}</span>
+            <div class="item-info">
+                <div class="item-name">${stock.name}</div>
+                <div class="item-code">${stock.code}</div>
             </div>
-            <div class="trend-price">
-                <div class="${colorClass}">${stock.price.toLocaleString()}원</div>
-                <div class="${colorClass}" style="font-size: 0.75rem;">${sign} ${Math.abs(stock.percent)}%</div>
+            <div class="item-price">
+                <div class="item-price-val ${colorClass}">${stock.price.toLocaleString()}</div>
+                <div class="item-price-pct ${colorClass}">${sign} ${Math.abs(stock.percent)}%</div>
             </div>
         `;
 
@@ -177,114 +163,113 @@ function renderTrendingList() {
             updateDashboard(stock);
         });
 
-        listElement.appendChild(li);
+        list.appendChild(li);
     });
+
+    list.firstChild && list.firstChild.classList.add('active');
 }
 
-// Update the main dashboard with selected stock data
 function updateDashboard(stock) {
-    document.getElementById('selected-stock-name').innerText = stock.name;
-    document.getElementById('selected-stock-code').innerText = stock.code;
-    
-    const priceEl = document.getElementById('current-price');
-    priceEl.innerText = `${stock.price.toLocaleString()}원`;
-    
+    document.getElementById('selected-stock-name').textContent = stock.name;
+    document.getElementById('selected-stock-code').textContent = stock.code;
+
+    document.getElementById('current-price').textContent = `${stock.price.toLocaleString()}원`;
+
     const changeEl = document.getElementById('price-change');
     const isUp = stock.change >= 0;
-    changeEl.className = `price-change ${isUp ? 'up' : 'down'}`;
+    changeEl.className = `price-delta ${isUp ? 'up' : 'down'}`;
     const sign = isUp ? '▲' : '▼';
-    changeEl.innerText = `${sign} ${Math.abs(stock.change).toLocaleString()} (${stock.percent}%)`;
+    changeEl.textContent = `${sign} ${Math.abs(stock.change).toLocaleString()} (${stock.percent}%)`;
 
-    // Update Metrics
-    document.getElementById('metric-per').innerText = stock.per;
-    document.getElementById('metric-pbr').innerText = stock.pbr;
-    document.getElementById('metric-marketcap').innerText = stock.marketCap;
-    document.getElementById('metric-eps').innerText = stock.eps;
-    document.getElementById('metric-dividend').innerText = stock.dividend;
-    document.getElementById('metric-roe').innerText = stock.roe;
+    document.getElementById('metric-per').textContent = stock.per;
+    document.getElementById('metric-pbr').textContent = stock.pbr;
+    document.getElementById('metric-marketcap').textContent = stock.marketCap;
+    document.getElementById('metric-eps').textContent = stock.eps;
+    document.getElementById('metric-dividend').textContent = stock.dividend;
+    document.getElementById('metric-roe').textContent = stock.roe;
 
-    // Update News
     updateNews(stock.news);
-
     renderChart(stock.history);
 }
 
 function updateNews(news) {
-    const newsContent = document.getElementById('news-content');
-    newsContent.innerHTML = `
-        <div class="news-item">
-            <h4>${news.title}</h4>
-            <ul>
-                ${news.summary.map(item => `<li>${item}</li>`).join('')}
-            </ul>
-        </div>
+    document.getElementById('news-content').innerHTML = `
+        <div class="news-headline">${news.title}</div>
+        ${news.summary.map((item, i) => `
+            <div class="news-bullet">
+                <span class="news-num">0${i + 1}</span>
+                <span class="news-text">${item}</span>
+            </div>
+        `).join('')}
     `;
 }
 
-// Render Price Chart using Chart.js
 function renderChart(historyData) {
     const ctx = document.getElementById('stockChart').getContext('2d');
-    
-    if (currentChart) {
-        currentChart.destroy();
-    }
+
+    if (currentChart) currentChart.destroy();
 
     const isUp = historyData[historyData.length - 1] >= historyData[0];
-    const chartColor = isUp ? '#ef4444' : '#3b82f6';
+    const color = isUp ? '#f0516a' : '#3d9eff';
 
     currentChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: ['6일 전', '5일 전', '4일 전', '3일 전', '2일 전', '1일 전', '오늘'],
             datasets: [{
-                label: '주가',
                 data: historyData,
-                borderColor: chartColor,
-                backgroundColor: chartColor + '20',
+                borderColor: color,
+                backgroundColor: (ctx) => {
+                    const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+                    gradient.addColorStop(0, color + '30');
+                    gradient.addColorStop(1, color + '00');
+                    return gradient;
+                },
                 fill: true,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointBackgroundColor: chartColor
+                tension: 0.35,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: color,
+                pointBorderColor: '#0f1e35',
+                pointBorderWidth: 2,
+                pointHoverRadius: 5
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
+            interaction: { intersect: false, mode: 'index' },
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#94a3b8' }
+                    border: { display: false },
+                    ticks: { color: '#3a5470', font: { size: 10 } }
                 },
                 y: {
-                    grid: { color: '#334155' },
-                    ticks: { color: '#94a3b8' }
+                    grid: { color: '#101f33', drawBorder: false },
+                    border: { display: false },
+                    ticks: {
+                        color: '#3a5470',
+                        font: { size: 10 },
+                        callback: v => v.toLocaleString()
+                    }
                 }
             }
         }
     });
 }
 
-// Setup search functionality
 function setupSearch() {
-    const searchInput = document.getElementById('stock-search');
-    searchInput.addEventListener('input', (e) => {
+    document.getElementById('stock-search').addEventListener('input', e => {
         const term = e.target.value.toLowerCase();
-        const items = document.querySelectorAll('.stock-item');
-        
-        items.forEach((item, index) => {
-            const stock = stockData[index];
-            if (stock.name.toLowerCase().includes(term) || stock.code.includes(term)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+        document.querySelectorAll('.stock-item').forEach((item, i) => {
+            const stock = stockData[i];
+            item.style.display =
+                stock.name.toLowerCase().includes(term) || stock.code.includes(term)
+                    ? 'flex' : 'none';
         });
     });
 }
 
-// Run init on load
 window.onload = init;

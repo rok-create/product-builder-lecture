@@ -3,86 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockDash - 객관적 주식 인사이트</title>
+    <title>StockDash — 주식 인사이트</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="dark-mode">
-    <div class="app-container">
+<body>
+    <div class="app">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>실시간 트렌드</h2>
-                <p>거래량/변동률 기준</p>
+            <div class="sidebar-brand">
+                <div class="brand-icon">S</div>
+                <div>
+                    <div class="brand-name">StockDash</div>
+                    <div class="brand-sub">실시간 트렌드</div>
+                </div>
             </div>
-            <ul id="trending-list" class="stock-list">
-                <!-- Trending stocks will be injected here -->
-            </ul>
+            <div class="sidebar-search">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" id="stock-search" placeholder="종목 검색...">
+            </div>
+            <div class="sidebar-label">인기 종목</div>
+            <ul id="trending-list" class="stock-list"></ul>
         </aside>
 
-        <main class="main-content">
-            <header class="top-bar">
-                <div class="search-container">
-                    <input type="text" id="stock-search" placeholder="종목명 또는 코드 입력...">
+        <main class="main">
+            <header class="topbar">
+                <div class="market-pill">
+                    <span class="live-dot"></span>
+                    <span class="market-name">KOSPI</span>
+                    <span class="market-value" id="kospi-value">—</span>
+                    <span class="market-change up" id="kospi-change">—</span>
                 </div>
-                <div class="market-status">
-                    <span class="status-indicator live"></span> KOSPI 2,750.32 <span class="up">▲ 1.2%</span>
-                </div>
+                <div class="update-time" id="update-time">—</div>
             </header>
 
-            <section class="dashboard-grid">
-                <div class="stock-summary-card">
-                    <div class="stock-info">
-                        <h1 id="selected-stock-name">삼성전자</h1>
-                        <span id="selected-stock-code">005930</span>
-                    </div>
-                    <div class="price-info">
-                        <div class="current-price" id="current-price">78,500원</div>
-                        <div class="price-change up" id="price-change">▲ 1,200 (1.55%)</div>
-                    </div>
+            <section class="stock-hero">
+                <div class="hero-left">
+                    <div class="stock-badge" id="selected-stock-code">005930</div>
+                    <h1 class="stock-name" id="selected-stock-name">삼성전자</h1>
                 </div>
-
-                <div class="chart-container card">
-                    <h3>주가 추이 (최근 30일)</h3>
-                    <canvas id="stockChart"></canvas>
-                </div>
-
-                <div class="fundamentals-container">
-                    <h3>핵심 재무 지표 (Fundamental)</h3>
-                    <div class="metrics-grid">
-                        <div class="metric-card card">
-                            <span class="label">PER (주가수익비율)</span>
-                            <span class="value" id="metric-per">35.21</span>
-                        </div>
-                        <div class="metric-card card">
-                            <span class="label">PBR (주가순자산비율)</span>
-                            <span class="value" id="metric-pbr">1.45</span>
-                        </div>
-                        <div class="metric-card card">
-                            <span class="label">시가총액</span>
-                            <span class="value" id="metric-marketcap">468.5조</span>
-                        </div>
-                        <div class="metric-card card">
-                            <span class="label">EPS (주당순이익)</span>
-                            <span class="value" id="metric-eps">2,230원</span>
-                        </div>
-                        <div class="metric-card card">
-                            <span class="label">배당수익률</span>
-                            <span class="value" id="metric-dividend">2.1%</span>
-                        </div>
-                        <div class="metric-card card">
-                            <span class="label">ROE (자기자본이익률)</span>
-                            <span class="value" id="metric-roe">12.5%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="news-summary-container card">
-                    <h3>오늘의 핵심 뉴스 (3줄 요약)</h3>
-                    <div id="news-content" class="news-content">
-                        <!-- News items will be injected here -->
-                    </div>
+                <div class="hero-right">
+                    <div class="price" id="current-price">—</div>
+                    <div class="price-delta up" id="price-change">—</div>
                 </div>
             </section>
+
+            <div class="content-grid">
+                <div class="chart-card card">
+                    <div class="card-header">
+                        <span class="card-title">주가 추이</span>
+                        <span class="card-sub">최근 7거래일</span>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="stockChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="metrics-card card">
+                    <div class="card-header">
+                        <span class="card-title">핵심 지표</span>
+                    </div>
+                    <div class="metrics-list">
+                        <div class="metric-row">
+                            <span class="metric-label">PER</span>
+                            <span class="metric-value" id="metric-per">—</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">PBR</span>
+                            <span class="metric-value" id="metric-pbr">—</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">시가총액</span>
+                            <span class="metric-value" id="metric-marketcap">—</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">EPS</span>
+                            <span class="metric-value" id="metric-eps">—</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">배당수익률</span>
+                            <span class="metric-value" id="metric-dividend">—</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">ROE</span>
+                            <span class="metric-value" id="metric-roe">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-card card">
+                    <div class="card-header">
+                        <span class="card-title">오늘의 핵심 뉴스</span>
+                        <span class="card-sub">3줄 요약</span>
+                    </div>
+                    <div id="news-content" class="news-content"></div>
+                </div>
+            </div>
         </main>
     </div>
     <script src="main.js"></script>
