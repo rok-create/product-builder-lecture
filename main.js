@@ -355,3 +355,384 @@ async function init() {
 }
 
 window.onload = init;
+
+(() => {
+    let marketChart = null;
+    let selectedAsset = null;
+    let currentCategory = 'all';
+
+    const categories = [
+        { id: 'all', label: '전체' },
+        { id: 'index', label: '지수' },
+        { id: 'energy', label: '에너지' },
+        { id: 'metal', label: '금속' }
+    ];
+
+    const marketAssets = [
+        {
+            id: 'nasdaq', name: 'NASDAQ Composite', short: 'IXIC', category: 'index', categoryLabel: '미국 지수',
+            finnhub: '^IXIC', unit: 'pt', price: 18491.62, change: 142.18, percent: 0.78,
+            note: '미국 성장주와 기술주 흐름을 보는 핵심 지수',
+            history: [17930, 18012, 18144, 18065, 18228, 18349, 18491],
+            metrics: [['거래소', 'NASDAQ'], ['주요 섹터', '기술, AI, 반도체'], ['변동성', '높음'], ['관찰 포인트', '금리와 빅테크 실적'], ['통화', 'USD'], ['세션', '미국 정규장']],
+            insight: {
+                title: '나스닥은 AI와 반도체 주도주가 강할 때 대시보드의 위험 선호 신호로 해석하기 좋습니다.',
+                bullets: ['상승폭이 커질수록 성장주 비중이 큰 포트폴리오에는 우호적입니다.', '유가 상승과 금리 부담이 같이 나타나면 지수 상승의 질을 따로 확인해야 합니다.', '금값이 함께 오르면 단순 위험 선호보다 헤지 수요가 섞였을 가능성이 있습니다.']
+            }
+        },
+        {
+            id: 'sp500', name: 'S&P 500', short: 'SPX', category: 'index', categoryLabel: '미국 지수',
+            finnhub: '^GSPC', unit: 'pt', price: 5638.41, change: 28.62, percent: 0.51,
+            note: '미국 대형주 전반의 체력을 확인하는 기준 지수',
+            history: [5534, 5561, 5588, 5572, 5601, 5609, 5638],
+            metrics: [['거래소', 'NYSE/NASDAQ'], ['범위', '대형주 500개'], ['변동성', '중간'], ['관찰 포인트', '실적과 금리'], ['통화', 'USD'], ['세션', '미국 정규장']],
+            insight: {
+                title: 'S&P 500은 나스닥보다 넓은 시장 체력을 보여 주며, 상승 확산 여부를 판단하는 기준입니다.',
+                bullets: ['나스닥만 강하고 S&P가 둔하면 일부 빅테크 쏠림으로 볼 수 있습니다.', '동반 상승은 글로벌 주식 위험 선호가 살아나는 흐름입니다.', '에너지 가격 급등 시 마진 압박 가능성을 같이 봐야 합니다.']
+            }
+        },
+        {
+            id: 'kospi', name: 'KOSPI', short: 'KOSPI', category: 'index', categoryLabel: '한국 지수',
+            finnhub: 'KS11.KS', unit: 'pt', price: 2894.32, change: 18.4, percent: 0.64,
+            note: '국내 대형주와 외국인 수급을 확인하는 한국 대표 지수',
+            history: [2821, 2838, 2855, 2849, 2866, 2875, 2894],
+            metrics: [['시장', '한국 유가증권시장'], ['주요 섹터', '반도체, 자동차, 금융'], ['변동성', '중간'], ['관찰 포인트', '환율과 외국인 수급'], ['통화', 'KRW'], ['세션', '한국 정규장']],
+            insight: {
+                title: 'KOSPI는 원화, 반도체 사이클, 외국인 수급에 민감하게 반응합니다.',
+                bullets: ['나스닥 강세가 이어지면 반도체 대형주에 긍정적으로 연결될 수 있습니다.', '유가 상승은 항공, 화학, 운송 업종에는 부담입니다.', '달러 강세와 동반될 경우 외국인 수급 변화를 확인해야 합니다.']
+            }
+        },
+        {
+            id: 'wti', name: 'WTI Crude Oil', short: 'WTI', category: 'energy', categoryLabel: '원유',
+            finnhub: 'OANDA:WTICO_USD', unit: 'USD/bbl', price: 78.42, change: -0.68, percent: -0.86,
+            note: '미국 서부텍사스산 원유 가격으로 에너지 비용과 인플레이션 압력을 확인',
+            history: [80.1, 79.7, 80.4, 79.2, 78.8, 79.1, 78.42],
+            metrics: [['상품', 'Crude Oil'], ['벤치마크', 'WTI'], ['수요 민감도', '경기, 이동량'], ['공급 변수', 'OPEC+, 재고'], ['단위', '배럴당 달러'], ['리스크', '지정학']],
+            insight: {
+                title: 'WTI 하락은 비용 부담 완화 신호지만, 경기 수요 둔화가 원인인지 구분해야 합니다.',
+                bullets: ['유가가 빠지면 항공, 운송, 소비재에는 비용 측면에서 우호적입니다.', '급락이 경기 침체 우려에서 나오면 주식시장에는 오히려 부담이 될 수 있습니다.', '브렌트와 방향이 갈리면 지역별 공급 이슈를 따로 확인해야 합니다.']
+            }
+        },
+        {
+            id: 'brent', name: 'Brent Crude Oil', short: 'BRENT', category: 'energy', categoryLabel: '원유',
+            finnhub: 'OANDA:BCO_USD', unit: 'USD/bbl', price: 82.17, change: -0.44, percent: -0.53,
+            note: '글로벌 원유 가격의 대표 벤치마크',
+            history: [83.5, 83.1, 83.7, 82.9, 82.4, 82.6, 82.17],
+            metrics: [['상품', 'Crude Oil'], ['벤치마크', 'Brent'], ['수요 민감도', '글로벌 경기'], ['공급 변수', '중동, 북해, OPEC+'], ['단위', '배럴당 달러'], ['리스크', '운송로']],
+            insight: {
+                title: '브렌트는 글로벌 공급 불안과 지정학 리스크를 더 직접적으로 반영하는 편입니다.',
+                bullets: ['브렌트 프리미엄 확대는 해외 공급 차질 우려로 해석할 수 있습니다.', '정유, 에너지 기업에는 가격 상승이 실적 기대를 키울 수 있습니다.', '소비재와 제조업에는 원가 부담으로 이어질 수 있습니다.']
+            }
+        },
+        {
+            id: 'gold', name: 'Gold Spot', short: 'XAU', category: 'metal', categoryLabel: '귀금속',
+            finnhub: 'OANDA:XAU_USD', unit: 'USD/oz', price: 2378.9, change: 19.7, percent: 0.84,
+            note: '안전자산, 실질금리, 달러 흐름을 함께 보여 주는 금 현물 가격',
+            history: [2318, 2336, 2341, 2352, 2349, 2359, 2378],
+            metrics: [['상품', 'Gold'], ['성격', '안전자산'], ['민감 변수', '실질금리, 달러'], ['수요', '중앙은행, ETF'], ['단위', '트로이온스'], ['리스크', '금리 반등']],
+            insight: {
+                title: '금값 상승은 안전자산 수요 또는 금리 하락 기대가 강해졌다는 신호일 수 있습니다.',
+                bullets: ['주식과 금이 같이 오르면 유동성 기대가 함께 작동하는 장세일 수 있습니다.', '달러 약세가 동반되면 금 상승의 지속성이 높아질 수 있습니다.', '유가 상승과 금 상승이 같이 나타나면 인플레이션 헤지 수요를 의심해야 합니다.']
+            }
+        },
+        {
+            id: 'silver', name: 'Silver Spot', short: 'XAG', category: 'metal', categoryLabel: '귀금속',
+            finnhub: 'OANDA:XAG_USD', unit: 'USD/oz', price: 29.84, change: 0.21, percent: 0.71,
+            note: '귀금속 성격과 산업재 수요를 동시에 반영하는 은 가격',
+            history: [28.7, 28.9, 29.1, 28.95, 29.4, 29.63, 29.84],
+            metrics: [['상품', 'Silver'], ['성격', '귀금속/산업재'], ['민감 변수', '태양광, 제조업'], ['변동성', '높음'], ['단위', '트로이온스'], ['리스크', '경기 둔화']],
+            insight: {
+                title: '은은 금보다 경기 민감도가 높아 위험 선호와 산업 수요를 같이 봐야 합니다.',
+                bullets: ['금보다 강하면 산업재 수요 기대가 붙은 흐름일 수 있습니다.', '나스닥 강세와 동반되면 성장 테마와 원자재 수요가 함께 살아나는 그림입니다.', '변동성이 커서 단기 신호는 금보다 보수적으로 해석해야 합니다.']
+            }
+        }
+    ];
+
+    function apiKey() {
+        return localStorage.getItem(FINNHUB_KEY_STORAGE)?.trim() || '';
+    }
+
+    function valueText(asset) {
+        const value = asset.price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return asset.unit === 'pt' ? `${value} pt` : `$${value}`;
+    }
+
+    function changeText(asset) {
+        const sign = asset.change >= 0 ? '+' : '-';
+        return `${sign}${Math.abs(asset.change).toLocaleString('ko-KR', { maximumFractionDigits: 2 })} (${sign}${Math.abs(asset.percent).toFixed(2)}%)`;
+    }
+
+    async function fetchQuote(asset) {
+        if (!apiKey()) return null;
+        try {
+            const url = `${FINNHUB_API}?symbol=${encodeURIComponent(asset.finnhub)}&token=${encodeURIComponent(apiKey())}`;
+            const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+            if (!response.ok) return null;
+            const quote = await response.json();
+            if (typeof quote.c !== 'number' || quote.c <= 0) return null;
+            return { asset, quote };
+        } catch {
+            return null;
+        }
+    }
+
+    async function refreshMarkets() {
+        const quotes = await Promise.all(marketAssets.map(fetchQuote));
+        const valid = quotes.filter(Boolean);
+
+        if (valid.length) {
+            valid.forEach(({ asset, quote }) => {
+                const previous = quote.pc || asset.price;
+                asset.price = quote.c;
+                asset.change = typeof quote.d === 'number' ? quote.d : quote.c - previous;
+                asset.percent = typeof quote.dp === 'number' ? quote.dp : (asset.change / previous) * 100;
+                asset.history = [...asset.history.slice(1), asset.price];
+            });
+        } else {
+            marketAssets.forEach(asset => {
+                const volatility = asset.category === 'index' ? 0.002 : 0.004;
+                const delta = +(asset.price * (Math.random() - 0.48) * volatility).toFixed(2);
+                asset.price = Math.max(0.01, +(asset.price + delta).toFixed(2));
+                asset.change = +(asset.change + delta).toFixed(2);
+                asset.percent = +((asset.change / (asset.price - asset.change || 1)) * 100).toFixed(2);
+                asset.history = [...asset.history.slice(1), asset.price];
+            });
+        }
+
+        setMarketStatus(Boolean(valid.length));
+        renderMarketBoard();
+        renderAssetList();
+        updateDashboard(marketAssets.find(asset => asset.id === selectedAsset?.id) || marketAssets[0]);
+    }
+
+    function setMarketStatus(isLive) {
+        const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('update-time').textContent = `${isLive ? 'FINNHUB LIVE' : apiKey() ? '대기 중' : '데모 데이터'} · ${time}`;
+        document.getElementById('market-session').textContent = isLive ? '실시간 글로벌 시장' : '글로벌 시장 모니터링';
+    }
+
+    function visibleAssets() {
+        const term = document.getElementById('asset-search')?.value.trim().toLowerCase() || '';
+        return marketAssets.filter(asset => {
+            const categoryMatch = currentCategory === 'all' || asset.category === currentCategory;
+            const termMatch = !term || asset.name.toLowerCase().includes(term) || asset.short.toLowerCase().includes(term) || asset.categoryLabel.toLowerCase().includes(term);
+            return categoryMatch && termMatch;
+        });
+    }
+
+    function renderCategoryTabs() {
+        const tabs = document.getElementById('category-tabs');
+        tabs.innerHTML = categories.map(category => `
+            <button type="button" class="tab-button ${category.id === currentCategory ? 'active' : ''}" data-category="${category.id}">${category.label}</button>
+        `).join('');
+
+        tabs.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                currentCategory = button.dataset.category;
+                renderCategoryTabs();
+                renderAssetList();
+            });
+        });
+    }
+
+    function renderAssetList() {
+        const list = document.getElementById('asset-list');
+        list.innerHTML = visibleAssets().map(asset => {
+            const up = asset.change >= 0;
+            return `
+                <li class="asset-item ${asset.category} ${selectedAsset?.id === asset.id ? 'active' : ''}" data-id="${asset.id}">
+                    <div class="asset-symbol">${asset.short.slice(0, 3)}</div>
+                    <div class="asset-info">
+                        <div class="asset-title">${asset.name}</div>
+                        <div class="asset-sub">${asset.categoryLabel} · ${asset.unit}</div>
+                    </div>
+                    <div class="asset-quote">
+                        <strong>${valueText(asset)}</strong>
+                        <span class="${up ? 'up' : 'down'}">${changeText(asset)}</span>
+                    </div>
+                </li>
+            `;
+        }).join('');
+
+        list.querySelectorAll('.asset-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const asset = marketAssets.find(entry => entry.id === item.dataset.id);
+                if (asset) updateDashboard(asset);
+                renderAssetList();
+            });
+        });
+    }
+
+    function renderMarketBoard() {
+        const board = document.getElementById('market-board');
+        const featured = ['nasdaq', 'kospi', 'wti', 'brent', 'gold'].map(id => marketAssets.find(asset => asset.id === id));
+        board.innerHTML = featured.map(asset => {
+            const up = asset.change >= 0;
+            const min = Math.min(...asset.history);
+            const max = Math.max(...asset.history);
+            const spread = max - min || 1;
+            const bars = asset.history.map(value => `<span style="height:${22 + ((value - min) / spread) * 58}%"></span>`).join('');
+            return `
+                <button type="button" class="market-tile" data-id="${asset.id}">
+                    <div class="tile-label"><span>${asset.name}</span><span>${asset.short}</span></div>
+                    <div class="tile-value">${valueText(asset)}</div>
+                    <div class="tile-change ${up ? 'up' : 'down'}">${changeText(asset)}</div>
+                    <div class="tile-spark">${bars}</div>
+                </button>
+            `;
+        }).join('');
+
+        board.querySelectorAll('.market-tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const asset = marketAssets.find(entry => entry.id === tile.dataset.id);
+                if (asset) updateDashboard(asset);
+                renderAssetList();
+            });
+        });
+    }
+
+    function updateDashboard(asset) {
+        selectedAsset = asset;
+        const up = asset.change >= 0;
+        document.getElementById('selected-asset-code').textContent = asset.short;
+        document.getElementById('selected-asset-category').textContent = asset.categoryLabel;
+        document.getElementById('selected-asset-name').textContent = asset.name;
+        document.getElementById('selected-asset-note').textContent = asset.note;
+        document.getElementById('current-price').textContent = valueText(asset);
+
+        const changeEl = document.getElementById('price-change');
+        changeEl.className = `price-delta ${up ? 'up' : 'down'}`;
+        changeEl.textContent = changeText(asset);
+
+        document.getElementById('metrics-list').innerHTML = asset.metrics.map(([label, value]) => `
+            <div class="metric-row"><span class="metric-label">${label}</span><span class="metric-value">${value}</span></div>
+        `).join('');
+
+        renderMacroGrid();
+        renderInsight(asset);
+        renderChart(asset);
+    }
+
+    function renderMacroGrid() {
+        const macroIds = ['nasdaq', 'wti', 'gold'];
+        document.getElementById('macro-grid').innerHTML = macroIds.map(id => {
+            const asset = marketAssets.find(entry => entry.id === id);
+            const up = asset.change >= 0;
+            return `
+                <button type="button" class="macro-item" data-id="${asset.id}">
+                    <div class="macro-name">${asset.name}</div>
+                    <div class="macro-value">${valueText(asset)}</div>
+                    <div class="macro-change ${up ? 'up' : 'down'}">${changeText(asset)}</div>
+                </button>
+            `;
+        }).join('');
+
+        document.querySelectorAll('.macro-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const asset = marketAssets.find(entry => entry.id === item.dataset.id);
+                if (asset) updateDashboard(asset);
+                renderAssetList();
+            });
+        });
+    }
+
+    function renderInsight(asset) {
+        document.getElementById('insight-content').innerHTML = `
+            <div class="insight-headline">${asset.insight.title}</div>
+            ${asset.insight.bullets.map((bullet, index) => `
+                <div class="insight-bullet">
+                    <span class="insight-num">${index + 1}</span>
+                    <span class="insight-text">${bullet}</span>
+                </div>
+            `).join('')}
+        `;
+    }
+
+    function renderChart(asset) {
+        const canvas = document.getElementById('assetChart');
+        if (!canvas || !window.Chart) return;
+        const ctx = canvas.getContext('2d');
+        if (marketChart) marketChart.destroy();
+
+        const up = asset.history[asset.history.length - 1] >= asset.history[0];
+        const color = up ? '#20c997' : '#ff6b6b';
+
+        marketChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['6D', '5D', '4D', '3D', '2D', '1D', '오늘'],
+                datasets: [{
+                    data: asset.history,
+                    borderColor: color,
+                    backgroundColor: context => {
+                        const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 260);
+                        gradient.addColorStop(0, `${color}35`);
+                        gradient.addColorStop(1, `${color}00`);
+                        return gradient;
+                    },
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#151a22',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: context => context.parsed.y.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: { grid: { display: false }, border: { display: false }, ticks: { color: '#697687', font: { size: 11 } } },
+                    y: {
+                        grid: { color: '#1d2530' },
+                        border: { display: false },
+                        ticks: { color: '#697687', font: { size: 11 }, callback: value => value.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) }
+                    }
+                }
+            }
+        });
+    }
+
+    function setupGlobalMarketApp() {
+        selectedAsset = marketAssets[0];
+        renderCategoryTabs();
+        renderMarketBoard();
+        renderAssetList();
+        updateDashboard(selectedAsset);
+        setMarketStatus(false);
+
+        document.getElementById('asset-search').addEventListener('input', renderAssetList);
+
+        const input = document.getElementById('api-key');
+        const button = document.getElementById('save-api-key');
+        const savedKey = apiKey();
+        if (savedKey) input.value = savedKey;
+
+        button.addEventListener('click', async () => {
+            const key = input.value.trim();
+            if (key) {
+                localStorage.setItem(FINNHUB_KEY_STORAGE, key);
+            } else {
+                localStorage.removeItem(FINNHUB_KEY_STORAGE);
+            }
+            button.textContent = '저장됨';
+            await refreshMarkets();
+            setTimeout(() => { button.textContent = '저장'; }, 1200);
+        });
+
+        refreshMarkets();
+        setInterval(refreshMarkets, 60000);
+    }
+
+    window.onload = setupGlobalMarketApp;
+})();
