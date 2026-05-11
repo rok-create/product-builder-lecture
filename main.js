@@ -360,6 +360,19 @@ window.onload = init;
     let marketChart = null;
     let selectedAsset = null;
     let currentCategory = 'all';
+    let lastProviderStatus = 'Yahoo Finance 자동 조회';
+
+    const YAHOO_CHART_API = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    const yahooSymbols = {
+        nasdaq: '^IXIC',
+        sp500: '^GSPC',
+        kospi: '^KS11',
+        wti: 'CL=F',
+        brent: 'BZ=F',
+        gold: 'GC=F',
+        silver: 'SI=F'
+    };
 
     const categories = [
         { id: 'all', label: '전체' },
@@ -448,10 +461,6 @@ window.onload = init;
         }
     ];
 
-    function apiKey() {
-        return localStorage.getItem(FINNHUB_KEY_STORAGE)?.trim() || '';
-    }
-
     function valueText(asset) {
         const value = asset.price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return asset.unit === 'pt' ? `${value} pt` : `$${value}`;
@@ -463,17 +472,41 @@ window.onload = init;
     }
 
     async function fetchQuote(asset) {
-        if (!apiKey()) return null;
         try {
-            const url = `${FINNHUB_API}?symbol=${encodeURIComponent(asset.finnhub)}&token=${encodeURIComponent(apiKey())}`;
+            const symbol = yahooSymbols[asset.id];
+            if (!symbol) return null;
+
+            const sourceUrl = `${YAHOO_CHART_API}${encodeURIComponent(symbol)}?range=1d&interval=1m`;
+            const url = `${CORS_PROXY}${encodeURIComponent(sourceUrl)}`;
             const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
             if (!response.ok) return null;
-            const quote = await response.json();
-            if (typeof quote.c !== 'number' || quote.c <= 0) return null;
-            return { asset, quote };
+            const payload = await response.json();
+            const result = payload?.chart?.result?.[0];
+            const meta = result?.meta;
+            const closes = result?.indicators?.quote?.[0]?.close?.filter(value => typeof value === 'number' && value > 0) || [];
+            const price = meta?.regularMarketPrice || closes.at(-1);
+            const previous = meta?.previousClose || meta?.chartPreviousClose || closes[0];
+            if (typeof price !== 'number' || typeof previous !== 'number' || price <= 0 || previous <= 0) return null;
+
+            return {
+                asset,
+                quote: {
+                    price,
+                    previous,
+                    time: meta?.regularMarketTime,
+                    history: sampleHistory(closes)
+                }
+            };
         } catch {
             return null;
         }
+    }
+
+    function sampleHistory(values) {
+        const clean = values.filter(value => typeof value === 'number' && value > 0);
+        if (clean.length <= 7) return clean;
+        const step = (clean.length - 1) / 6;
+        return Array.from({ length: 7 }, (_, index) => clean[Math.round(index * step)]);
     }
 
     async function refreshMarkets() {
@@ -482,20 +515,11 @@ window.onload = init;
 
         if (valid.length) {
             valid.forEach(({ asset, quote }) => {
-                const previous = quote.pc || asset.price;
-                asset.price = quote.c;
-                asset.change = typeof quote.d === 'number' ? quote.d : quote.c - previous;
-                asset.percent = typeof quote.dp === 'number' ? quote.dp : (asset.change / previous) * 100;
-                asset.history = [...asset.history.slice(1), asset.price];
-            });
-        } else {
-            marketAssets.forEach(asset => {
-                const volatility = asset.category === 'index' ? 0.002 : 0.004;
-                const delta = +(asset.price * (Math.random() - 0.48) * volatility).toFixed(2);
-                asset.price = Math.max(0.01, +(asset.price + delta).toFixed(2));
-                asset.change = +(asset.change + delta).toFixed(2);
-                asset.percent = +((asset.change / (asset.price - asset.change || 1)) * 100).toFixed(2);
-                asset.history = [...asset.history.slice(1), asset.price];
+                asset.price = quote.price;
+                asset.change = quote.price - quote.previous;
+                asset.percent = (asset.change / quote.previous) * 100;
+                if (quote.history.length >= 2) asset.history = quote.history;
+                asset.lastTradeTime = quote.time;
             });
         }
 
@@ -507,8 +531,10 @@ window.onload = init;
 
     function setMarketStatus(isLive) {
         const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        document.getElementById('update-time').textContent = `${isLive ? 'FINNHUB LIVE' : apiKey() ? '대기 중' : '데모 데이터'} · ${time}`;
-        document.getElementById('market-session').textContent = isLive ? '실시간 글로벌 시장' : '글로벌 시장 모니터링';
+        lastProviderStatus = isLive ? 'Yahoo Finance 자동 조회' : '자동 조회 실패 · 마지막 값 유지';
+        document.getElementById('update-time').textContent = `${lastProviderStatus} · ${time}`;
+        document.getElementById('market-session').textContent = isLive ? '자동 갱신 글로벌 시장' : '글로벌 시장 모니터링';
+        document.getElementById('data-source').textContent = lastProviderStatus;
     }
 
     function visibleAssets() {
@@ -713,25 +739,8 @@ window.onload = init;
 
         document.getElementById('asset-search').addEventListener('input', renderAssetList);
 
-        const input = document.getElementById('api-key');
-        const button = document.getElementById('save-api-key');
-        const savedKey = apiKey();
-        if (savedKey) input.value = savedKey;
-
-        button.addEventListener('click', async () => {
-            const key = input.value.trim();
-            if (key) {
-                localStorage.setItem(FINNHUB_KEY_STORAGE, key);
-            } else {
-                localStorage.removeItem(FINNHUB_KEY_STORAGE);
-            }
-            button.textContent = '저장됨';
-            await refreshMarkets();
-            setTimeout(() => { button.textContent = '저장'; }, 1200);
-        });
-
         refreshMarkets();
-        setInterval(refreshMarkets, 60000);
+        setInterval(refreshMarkets, 30000);
     }
 
     window.onload = setupGlobalMarketApp;
