@@ -362,8 +362,19 @@ window.onload = init;
     let currentCategory = 'all';
     let lastProviderStatus = 'Yahoo Finance 자동 조회';
 
+    const TWELVE_DATA_API = 'https://api.twelvedata.com';
+    const TWELVE_DATA_KEY_STORAGE = 'stockdash_twelve_data_api_key';
     const YAHOO_CHART_API = 'https://query1.finance.yahoo.com/v8/finance/chart/';
     const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    const twelveDataSymbols = {
+        nasdaq: 'IXIC',
+        sp500: 'SPX',
+        kospi: 'KOSPI',
+        wti: 'WTI/USD',
+        brent: 'XBR/USD',
+        gold: 'XAU/USD',
+        silver: 'XAG/USD'
+    };
     const yahooSymbols = {
         nasdaq: '^IXIC',
         sp500: '^GSPC',
@@ -461,6 +472,17 @@ window.onload = init;
         }
     ];
 
+    function getTwelveDataKey() {
+        const params = new URLSearchParams(window.location.search);
+        const urlKey = params.get('td_key');
+        if (urlKey) {
+            localStorage.setItem(TWELVE_DATA_KEY_STORAGE, urlKey.trim());
+            return urlKey.trim();
+        }
+
+        return window.STOCKDASH_TWELVE_DATA_KEY || localStorage.getItem(TWELVE_DATA_KEY_STORAGE)?.trim() || '';
+    }
+
     function valueText(asset) {
         const value = asset.price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return asset.unit === 'pt' ? `${value} pt` : `$${value}`;
@@ -472,6 +494,56 @@ window.onload = init;
     }
 
     async function fetchQuote(asset) {
+        const twelveDataQuote = await fetchTwelveDataQuote(asset);
+        return twelveDataQuote || fetchYahooQuote(asset);
+    }
+
+    async function fetchTwelveDataQuote(asset) {
+        const apikey = getTwelveDataKey();
+        const symbol = twelveDataSymbols[asset.id];
+        if (!apikey || !symbol) return null;
+
+        try {
+            const quoteUrl = `${TWELVE_DATA_API}/quote?symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apikey)}`;
+            const seriesUrl = `${TWELVE_DATA_API}/time_series?symbol=${encodeURIComponent(symbol)}&interval=1min&outputsize=7&apikey=${encodeURIComponent(apikey)}`;
+            const [quoteResponse, seriesResponse] = await Promise.all([
+                fetch(quoteUrl, { signal: AbortSignal.timeout(7000) }),
+                fetch(seriesUrl, { signal: AbortSignal.timeout(7000) })
+            ]);
+            if (!quoteResponse.ok) return null;
+
+            const quote = await quoteResponse.json();
+            if (quote.status === 'error') return null;
+
+            const price = Number(quote.close || quote.price);
+            const previous = Number(quote.previous_close);
+            if (!Number.isFinite(price) || !Number.isFinite(previous) || price <= 0 || previous <= 0) return null;
+
+            let history = [];
+            if (seriesResponse.ok) {
+                const series = await seriesResponse.json();
+                history = (series.values || [])
+                    .map(point => Number(point.close))
+                    .filter(value => Number.isFinite(value) && value > 0)
+                    .reverse();
+            }
+
+            return {
+                asset,
+                provider: 'Twelve Data',
+                quote: {
+                    price,
+                    previous,
+                    time: quote.timestamp,
+                    history: history.length >= 2 ? history : asset.history
+                }
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    async function fetchYahooQuote(asset) {
         try {
             const symbol = yahooSymbols[asset.id];
             if (!symbol) return null;
@@ -490,6 +562,7 @@ window.onload = init;
 
             return {
                 asset,
+                provider: 'Yahoo Finance',
                 quote: {
                     price,
                     previous,
@@ -523,15 +596,23 @@ window.onload = init;
             });
         }
 
-        setMarketStatus(Boolean(valid.length));
+        const primaryProvider = valid.some(item => item.provider === 'Twelve Data') ? 'Twelve Data' : valid[0]?.provider;
+        setMarketStatus(Boolean(valid.length), primaryProvider);
         renderMarketBoard();
         renderAssetList();
         updateDashboard(marketAssets.find(asset => asset.id === selectedAsset?.id) || marketAssets[0]);
     }
 
-    function setMarketStatus(isLive) {
+    function setMarketStatus(isLive, provider) {
         const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        lastProviderStatus = isLive ? 'Yahoo Finance 자동 조회' : '자동 조회 실패 · 마지막 값 유지';
+        const hasTwelveKey = Boolean(getTwelveDataKey());
+        if (isLive && provider === 'Twelve Data') {
+            lastProviderStatus = 'Twelve Data 자동 조회';
+        } else if (isLive) {
+            lastProviderStatus = hasTwelveKey ? 'Twelve Data 실패 · Yahoo 대체' : 'Yahoo Finance 자동 조회';
+        } else {
+            lastProviderStatus = hasTwelveKey ? 'Twelve Data 조회 실패 · 마지막 값 유지' : 'Twelve Data 키 없음 · Yahoo 대체 실패';
+        }
         document.getElementById('update-time').textContent = `${lastProviderStatus} · ${time}`;
         document.getElementById('market-session').textContent = isLive ? '자동 갱신 글로벌 시장' : '글로벌 시장 모니터링';
         document.getElementById('data-source').textContent = lastProviderStatus;
