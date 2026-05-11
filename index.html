@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockDash — 주식 인사이트</title>
+    <title>StockDash - 글로벌 마켓 대시보드</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -11,29 +11,35 @@
     <div class="app">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-icon">S</div>
+                <div class="brand-icon">SD</div>
                 <div>
                     <div class="brand-name">StockDash</div>
-                    <div class="brand-sub">실시간 트렌드</div>
+                    <div class="brand-sub">Global markets</div>
                 </div>
             </div>
+
             <div class="sidebar-search">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
                 </svg>
-                <input type="text" id="stock-search" placeholder="종목 검색...">
+                <input type="text" id="asset-search" placeholder="나스닥, 유가, 금값 검색">
             </div>
-            <div class="sidebar-label">인기 종목</div>
-            <ul id="trending-list" class="stock-list"></ul>
+
+            <div class="sidebar-tabs" id="category-tabs"></div>
+
+            <div class="sidebar-label">관심 자산</div>
+            <ul id="asset-list" class="asset-list"></ul>
         </aside>
 
         <main class="main">
             <header class="topbar">
-                <div class="market-pill">
-                    <span class="live-dot"></span>
-                    <span class="market-name">KOSPI</span>
-                    <span class="market-value" id="kospi-value">—</span>
-                    <span class="market-change up" id="kospi-change">—</span>
+                <div class="topbar-left">
+                    <div class="market-status">
+                        <span class="live-dot"></span>
+                        <span id="market-session">글로벌 시장 모니터링</span>
+                    </div>
+                    <div class="update-time" id="update-time">-</div>
                 </div>
                 <div class="api-tools">
                     <label class="api-key-field" for="api-key">
@@ -41,71 +47,70 @@
                         <input id="api-key" type="password" placeholder="API 키">
                     </label>
                     <button class="api-save" id="save-api-key" type="button">저장</button>
-                    <div class="update-time" id="update-time">—</div>
                 </div>
             </header>
 
-            <section class="stock-hero">
+            <section class="market-board" id="market-board"></section>
+
+            <section class="asset-hero">
                 <div class="hero-left">
-                    <div class="stock-badge" id="selected-stock-code">005930</div>
-                    <h1 class="stock-name" id="selected-stock-name">삼성전자</h1>
+                    <div class="asset-meta">
+                        <span class="asset-badge" id="selected-asset-code">IXIC</span>
+                        <span class="asset-category" id="selected-asset-category">미국 지수</span>
+                    </div>
+                    <h1 class="asset-name" id="selected-asset-name">NASDAQ Composite</h1>
+                    <p class="asset-note" id="selected-asset-note">미국 성장주와 기술주 흐름을 보는 핵심 지수</p>
                 </div>
                 <div class="hero-right">
-                    <div class="price" id="current-price">—</div>
-                    <div class="price-delta up" id="price-change">—</div>
+                    <div class="price" id="current-price">-</div>
+                    <div class="price-delta up" id="price-change">-</div>
                 </div>
             </section>
 
             <div class="content-grid">
-                <div class="chart-card card">
-                    <div class="card-header">
-                        <span class="card-title">주가 추이</span>
-                        <span class="card-sub">최근 7거래일</span>
+                <section class="chart-card panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="panel-title">가격 흐름</span>
+                            <span class="panel-sub">최근 7개 관측치</span>
+                        </div>
+                        <div class="range-control" aria-label="chart range">
+                            <button type="button" class="active">7D</button>
+                            <button type="button">1M</button>
+                            <button type="button">YTD</button>
+                        </div>
                     </div>
                     <div class="chart-wrap">
-                        <canvas id="stockChart"></canvas>
+                        <canvas id="assetChart"></canvas>
                     </div>
-                </div>
+                </section>
 
-                <div class="metrics-card card">
-                    <div class="card-header">
-                        <span class="card-title">핵심 지표</span>
+                <section class="metrics-card panel">
+                    <div class="panel-header">
+                        <span class="panel-title">핵심 지표</span>
                     </div>
-                    <div class="metrics-list">
-                        <div class="metric-row">
-                            <span class="metric-label">PER</span>
-                            <span class="metric-value" id="metric-per">—</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">PBR</span>
-                            <span class="metric-value" id="metric-pbr">—</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">시가총액</span>
-                            <span class="metric-value" id="metric-marketcap">—</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">EPS</span>
-                            <span class="metric-value" id="metric-eps">—</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">배당수익률</span>
-                            <span class="metric-value" id="metric-dividend">—</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">ROE</span>
-                            <span class="metric-value" id="metric-roe">—</span>
-                        </div>
-                    </div>
-                </div>
+                    <div class="metrics-list" id="metrics-list"></div>
+                </section>
 
-                <div class="news-card card">
-                    <div class="card-header">
-                        <span class="card-title">오늘의 핵심 뉴스</span>
-                        <span class="card-sub">3줄 요약</span>
+                <section class="macro-card panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="panel-title">매크로 체크</span>
+                            <span class="panel-sub">지수, 에너지, 귀금속 동시 확인</span>
+                        </div>
                     </div>
-                    <div id="news-content" class="news-content"></div>
-                </div>
+                    <div class="macro-grid" id="macro-grid"></div>
+                </section>
+
+                <section class="news-card panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="panel-title">오늘의 해석</span>
+                            <span class="panel-sub">대시보드용 요약</span>
+                        </div>
+                    </div>
+                    <div id="insight-content" class="insight-content"></div>
+                </section>
             </div>
         </main>
     </div>
